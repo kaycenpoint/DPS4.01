@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,21 +16,22 @@
       height: 100vh;
       text-align: center;
       padding: 20px;
-    }label, p {
-  font-size: 1.2em;
-  margin: 1em 0 0.5em;
-}
+    }
 
-select, button {
-  padding: 10px;
-  font-size: 1em;
-  background: white;
-  color: black;
-  border: none;
-  margin-bottom: 1em;
-  cursor: pointer;
-}
+    label, p {
+      font-size: 1.2em;
+      margin: 1em 0 0.5em;
+    }
 
+    select, button {
+      padding: 10px;
+      font-size: 1em;
+      background: white;
+      color: black;
+      border: none;
+      margin-bottom: 1em;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -40,12 +42,16 @@ select, button {
     <option value="data">Raw Data</option>
     <option value="starlight">Starlight</option>
     <option value="dreamdust">Dreamdust</option>
-  </select>  <p>Choose your integration protocol:</p>
+  </select>
+
+  <p>Choose your integration protocol:</p>
   <select id="integration">
     <option value="sync">Soul Sync Synergetics</option>
     <option value="empathy">Emotional Empathy Epitome</option>
     <option value="desire">Xpyre uR De$1r3</option>
-  </select>  <p>Choose your soul object:</p>
+  </select>
+
+  <p>Choose your soul object:</p>
   <select id="soul-object">
     <option value="mirror">Fractal Mirror Blade</option>
     <option value="orb">Eclipse Memory Orb</option>
@@ -54,8 +60,12 @@ select, button {
     <option value="seed">Lunar Bloom Seed</option>
     <option value="circuit">Emotive Circuit Crown</option>
     <option value="vial">Vial of Time-Turnt Ink</option>
-  </select>  <br>
-  <button onclick="initiate()">Initiate Sequence</button>  <script>
+  </select>
+
+  <br>
+  <button onclick="initiate()">Initiate Sequence</button>
+
+  <script>
     function initiate() {
       const substance = document.getElementById('substance').value;
       const integration = document.getElementById('integration').value;
@@ -65,5 +75,6 @@ select, button {
       // You can redirect or log data here
       // window.location.href = 'lyris.html';
     }
-  </script></body>
+  </script>
+</body>
 </html>
