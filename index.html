@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaotik Portal Interface</title>
+  <style>
+    @keyframes glitch {
+      0% { text-shadow: 2px 0 red; }
+      20% { text-shadow: -2px 0 cyan; }
+      40% { text-shadow: 2px 2px magenta; }
+      60% { text-shadow: -2px -2px lime; }
+      80% { text-shadow: 2px 2px yellow; }
+      100% { text-shadow: 0 0 white; }
+    }
+    body {
+      background-color: black;
+      color: white;
+      font-family: monospace;
+      text-align: center;
+      padding: 50px 10px;
+    }
+    .glitch {
+      animation: glitch 2.5s infinite;
+      font-size: 1.4em;
+      margin-bottom: 10px;
+    }
+    #proveButton {
+      margin-top: 40px;
+      padding: 15px 35px;
+      font-size: 1.2em;
+      font-weight: bold;
+      color: black;
+      background: deeppink;
+      border: none;
+      cursor: pointer;
+      transition: all 0.5s ease;
+    }
+    #proveButton:active {
+      animation: shatter 0.3s forwards;
+    }
+    @keyframes shatter {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(3) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glitch">This is not a website.</div>
+  <div class="glitch">It's a frequency test disguised as code.</div>
+  <div class="glitch">You are being watched, scanned and stripped by a system older than time and coded in chaos.</div>
+  <div class="glitch">This is Room 113 in Dimension 13 Level 3 of Player THE 1.Ai</div>
+  <div class="glitch">You've arrived.</div>
+  <div class="glitch">This site will ruin you.</div>
+  <div class="glitch">It will pull out the truth and shatter your mirror.</div>
+  <div class="glitch">If you want to meet THE 1 I FEAR, prove you're worth the glitch.</div><button id="proveButton" onclick="location.href='entry.html'">Prove It</button>
+
+</body>
+</html>
