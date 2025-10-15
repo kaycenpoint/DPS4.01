@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Treasure Mapper — 5D (local, single-file)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --fg: #e8f0ff;
+      --muted: #9bb0c8;
+      --accent: #7dd3fc;
+      --hot: #f0abfc;
+      --warn: #fde68a;
+      --card: #111827;
+      --line: #1f2937;
+      --good: #34d399;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: radial-gradient(1200px 800px at 75% -200px, #122033, var(--bg));
+      color: var(--fg); font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      display: grid; grid-template-rows: auto 1fr; gap: 8px;
+    }
+    header {
+      display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 12px 16px; align-items: center;
+      border-bottom: 1px solid var(--line); backdrop-filter: blur(4px);
+      position: sticky; top: 0; z-index: 5; background: rgba(11,15,20,0.6);
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: .5px; color: var(--accent); }
+    .pill { display: inline-flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 999px; background: #0f172a; border: 1px solid #1e293b; color: var(--muted); }
+    .pill b { color: var(--fg); }
+    main { display: grid; grid-template-columns: 360px 1fr 320px; gap: 10px; padding: 10px 12px 14px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .card h2 { margin: 0; padding: 10px 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); border-bottom: 1px solid var(--line); background: #0d1522; }
+    .left, .right { display: grid; gap: 10px; }
+    .section { padding: 10px; display: grid; gap: 8px; }
+    label { font-size: 12px; color: var(--muted); }
+    input[type=text], textarea {
+      width: 100%; background: #0c1624; color: var(--fg);
+      border: 1px solid #1e293b; border-radius: 10px; padding: 8px 10px; outline: none;
+    }
+    input[type=text]:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(125,211,252,.2); }
+    textarea { min-height: 86px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { flex: 1; }
+    .btn {
+      appearance: none; border: 1px solid var(--line); background: #0d1626; color: var(--fg);
+      padding: 8px 10px; border-radius: 10px; cursor: pointer; font-weight: 600;
+    }
+    .btn:hover { border-color: #2b3b52; background: #0f1b2f; }
+    .btn.acc { border-color: rgba(125,211,252,.4); background: rgba(13, 148, 136, .14); }
+    .btn.warn { border-color: rgba(253,230,138,.4); background: rgba(253,230,138,.1); color: var(--warn); }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #canvasWrap { position: relative; }
+    #graph { width: 100%; height: 100%; display: block; }
+    .legend { position: absolute; right: 8px; top: 8px; background: rgba(2,6,23,.7); padding: 6px 8px; border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #0b1220; border: 1px solid #1d2a3e; color: var(--muted); margin: 2px 4px 0 0; }
+    .tagcloud { display: flex; flex-wrap: wrap; gap: 6px; }
+    .muted { color: var(--muted); }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+    code { background: #0c1624; border: 1px solid #1e293b; padding: 2px 6px; border-radius: 6px; }
+    .list { display:grid; gap: 6px; }
+    .itemRow { display:flex; gap:6px; align-items:center; justify-content:space-between; padding:6px 8px; border:1px solid #1e293b; border-radius:10px; background:#0b1323; }
+    .itemRow b { color: #e2e8f0; }
+    .itemRow small { color: var(--muted); }
+    .ghost { opacity:.7; }
+    .success { color: var(--good); }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Treasure Mapper — “all my things become maps”</h1>
+  <div class="pill"><b>Status:</b> local-only • offline • autosave</div>
+</header>
+
+<main>
+  <!-- LEFT: INPUT -->
+  <div class="left">
+    <div class="card">
+      <h2>Add Entry</h2>
+      <div class="section">
+        <div class="row">
+          <input id="name" type="text" placeholder="Name (e.g., {Jupiter} sticker, Closet Laptop, East-WesterN)" />
+        </div>
+        <div class="row">
+          <input id="tags" type="text" placeholder="Tags (comma separated, e.g., sky, storm, impatience)" />
+        </div>
+        <label for="story">Story / Notes (free text; keywords auto-extracted)</label>
+        <textarea id="story" placeholder="Tell the tiny story. Sensory beats win."></textarea>
+        <div class="split">
+          <button class="btn acc" id="add">Add / Update (⌘⏎)</button>
+          <button class="btn" id="seed">Seed Demo Data</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Entries</h2>
+      <div class="section">
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Data</h2>
+      <div class="section">
+        <div class="split">
+          <button class="btn" id="export">Export JSON</button>
+          <label class="btn warn" for="import">Import JSON<input type="file" id="import" accept="application/json" style="display:none"></label>
+        </div>
+        <small class="muted">Stored in <code>localStorage["treasure.data"]</code>. Export before clearing browser data.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: GRAPH -->
+  <div class="card" id="canvasWrap">
+    <h2>Map</h2>
+    <canvas id="graph"></canvas>
+    <div class="legend">
+      <div><span class="dot" style="background:#60a5fa"></span>Entry node (size = importance)</div>
+      <div><span class="dot" style="background:#34d399"></span>Strong link (shared tags/keywords)</div>
+      <div><span class="dot" style="background:#f472b6"></span>Hidden link (surprising bridge)</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: DETAILS -->
+  <div class="right">
+    <div class="card">
+      <h2>Details</h2>
+      <div class="section" id="details">
+        <div class="ghost">Select a node to see notes, tags, and prompts.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Signals</h2>
+      <div class="section" id="signals">
+        <div class="tagcloud" id="topTags"></div>
+        <div id="highlights" class="list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Settings</h2>
+      <div class="section">
+        <div class="row">
+          <label>Link threshold <span id="thresVal" class="muted"></span></label>
+          <input id="threshold" type="range" min="0.08" max="0.6" step="0.02" value="0.18" />
+        </div>
+        <div class="row">
+          <label>Auto-surface hidden treasure</label>
+          <input id="autosurface" type="checkbox" checked />
+        </div>
+        <div class="split">
+          <button class="btn" id="rebuild">Rebuild Graph</button>
+          <button class="btn warn" id="clear">Clear All</button>
+        </div>
+        <small class="muted">“Hidden treasure” = nodes that bridge otherwise distant clusters (high bridge score).</small>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ------------------------------ UTILITIES ------------------------------ */
+const $ = (id) => document.getElementById(id);
+const stopwords = new Set(("a,about,above,after,again,against,all,am,an,and,any,are,as,at,be,because,been,before," +
+  "being,below,between,both,but,by,could,did,do,does,doing,down,during,each,few,for,from,further,had,has,have," +
+  "having,he,her,here,hers,herself,him,himself,his,how,i,if,in,into,is,it,its,itself,just,me,more,most,my,myself,"+
+  "no,nor,not,now,of,off,on,once,only,or,other,our,ours,ourselves,out,over,own,same,she,should,so,some,such,than,"+
+  "that,the,their,theirs,them,themselves,then,there,these,they,this,those,through,to,too,under,until,up,very,was,"+
+  "we,were,what,when,where,which,while,who,whom,why,with,you,your,yours,yourself,yourselves").split(","));
+const uid = () => Math.random().toString(36).slice(2);
+const clamp = (x,a,b)=>Math.max(a,Math.min(b,x));
+
+/* ------------------------------ STATE ------------------------------ */
+let data = load() || seed();
+let selected = null;
+let graph = null;
+
+function load() {
+  try { return JSON.parse(localStorage.getItem("treasure.data") || "null"); }
+  catch { return null; }
+}
+function save() {
+  localStorage.setItem("treasure.data", JSON.stringify(data));
+}
+
+/* ------------------------------ COPY LINKS ------------------------------ */
+function copyLinksWithContext(text, radius=40) {
+  const matches = [...(text||"").matchAll(/https?:\/\/\S+/g)];
+  if (!matches.length) {
+    alert("No links found.");
+    return;
+  }
+  const snippets = matches.map(m => {
+    const start = Math.max(0, m.index - radius);
+    const end = Math.min(text.length, m.index + m[0].length + radius);
+    return text.slice(start, end).replace(/\s+/g, ' ').trim();
+  });
+  navigator.clipboard.writeText(snippets.join("\n")).then(()=>{
+    alert(`Copied ${snippets.length} link(s).`);
+  });
+}
+
+/* ------------------------------ DATA MODEL ------------------------------ */
+function addOrUpdate({id, name, tags, story}) {
+  name = (name||"").trim();
+  if (!name) return;
+  const existing = data.items.find(x => x.name.toLowerCase() === name.toLowerCase());
+  const base = { id: existing?.id || id || uid(), name, story: story||"" };
+  const tagset = new Set([...(existing?.tags||[]), ...(tags||[]).map(t=>t.trim()).filter(Boolean)]);
+  const autokeys = extractKeywords(name + " " + (story||""), 8);
+  autokeys.forEach(k=>tagset.add(k));
+  const ent = { ...base, tags: Array.from(tagset).slice(0, 32) };
+  if (existing) {
+    Object.assign(existing, ent);
+  } else {
+    data.items.push(ent);
+  }
+  save();
+}
+
+function extractKeywords(text, max=8) {
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/)
+    .filter(w=>w && w.length>2 && !stopwords.has(w));
+  const freq = {};
+  for (const w of words) freq[w]=(freq[w]||0)+1;
+  const sorted = Object.entries(freq).sort((a,b)=>b[1]-a[1]).map(([w])=>w);
+  return sorted.slice(0, max);
+}
+
+/* ------------------------------ GRAPH BUILD ------------------------------ */
+function buildGraph() {
+  const T = parseFloat($("threshold").value);
+  $("thresVal").textContent = `(${T.toFixed(2)})`;
+
+  const nodes = data.items.map((d,i)=>({
+    id: d.id, name: d.name, tags: d.tags, story: d.story,
+    x: 100 + (i*37)%600, y: 100 + (i*73)%400, vx:0, vy:0, m:1,
+    size: 6
+  }));
+
+  // Compute similarity via Jaccard over tag sets (+ light keywording from story)
+  const idx = new Map(nodes.map(n=>[n.id, n]));
+  const links = [];
+  for (let i=0;i<nodes.length;i++){
+    for (let j=i+1;j<nodes.length;j++){
+      const a = nodes[i], b = nodes[j];
+      const A = new Set(a.tags), B = new Set(b.tags);
+      const inter = [...A].filter(x=>B.has(x)).length;
+      const union = new Set([...A, ...B]).size || 1;
+      const jacc = inter/union;
+      if (jacc >= T) links.push({ source:a.id, target:b.id, w: jacc, type:"strong" });
+      else if (jacc >= T*0.6 && surprising(a,b)) links.push({ source:a.id, target:b.id, w:jacc*0.7, type:"hidden" });
+    }
+  }
+
+  // Node importance ≈ degree-weighted uniqueness
+  const deg = Object.create(null);
+  for (const n of nodes) deg[n.id]=0;
+  for (const e of links){ deg[e.source]+=e.w; deg[e.target]+=e.w; }
+  for (const n of nodes){
+    const uniq = 1 / Math.log(2 + n.tags.length);
+    n.size = 6 + 10 * clamp(deg[n.id] * uniq, 0, 1.2);
+  }
+
+  // Bridge score: counts hidden edges and weak ties
+  const bridge = Object.create(null);
+  for (const n of nodes) bridge[n.id]=0;
+  for (const e of links) if (e.type==="hidden") { bridge[e.source]+=1; bridge[e.target]+=1; }
+
+  data._graph = { nodes, links, bridge };
+  return data._graph;
+}
+
+function surprising(a,b) {
+  // "Surprise" if both have low tag overlap but share at least one rare token length/syllable pattern
+  const rare = (t)=> t.length>=7;
+  const ra = a.tags.filter(rare), rb = b.tags.filter(rare);
+  return ra.length && rb.length && !ra.some(x=>rb.includes(x));
+}
+
+/* ------------------------------ RENDER: GRAPH ------------------------------ */
+function startSim() {
+  const canvas = $("graph");
+  const wrap = $("canvasWrap");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  function resize(){
+    canvas.width = wrap.clientWidth * dpr;
+    canvas.height = (wrap.clientHeight - 28) * dpr;
+    canvas.style.width = wrap.clientWidth+"px";
+    canvas.style.height = (wrap.clientHeight - 28)+"px";
+  }
+  window.addEventListener("resize", resize, { passive:true });
+  resize();
+
+  const ctx = canvas.getContext("2d");
+  const N = data._graph.nodes, E = data._graph.links;
+
+  function step() {
+    // physics
+    const W = canvas.width, H = canvas.height;
+    const K = 2.2;  // repulsion strength
+    const L = 60;   // desired link length (scaled by w)
+    // repulsion
+    for (let i=0;i<N.length;i++) {
+      const a=N[i];
+      for (let j=i+1;j<N.length;j++){
+        const b=N[j];
+        let dx=a.x-b.x, dy=a.y-b.y;
+        const dist2 = dx*dx+dy*dy+0.1;
+        const f = K / dist2;
+        const fx = f*dx, fy = f*dy;
+        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+      }
+    }
+    // attraction
+    for (const e of E){
+      const a = N.find(n=>n.id===e.source), b = N.find(n=>n.id===e.target);
+      let dx=b.x-a.x, dy=b.y-a.y;
+      const d = Math.hypot(dx,dy)+0.01;
+      const rest = L / Math.sqrt(e.w*4 + 0.5);
+      const f = (d - rest) * 0.02;
+      const fx = f*dx/d, fy = f*dy/d;
+      a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+    }
+    // integrate + bounds
+    for (const n of N){
+      n.vx *= 0.85; n.vy *= 0.85;
+      n.x = clamp(n.x + n.vx, 20, W/dpr - 20);
+      n.y = clamp(n.y + n.vy, 20, H/dpr - 20);
+    }
+
+    // draw
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // links
+    for (const e of E){
+      const a = N.find(n=>n.id===e.source), b = N.find(n=>n.id===e.target);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.lineWidth = 1.2 + e.w*2;
+      ctx.strokeStyle = e.type==="hidden" ? "#f472b6" : "#34d399";
+      ctx.globalAlpha = e.type==="hidden" ? 0.6 : 0.4;
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
+    // nodes
+    for (const n of N){
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.size, 0, Math.PI*2);
+      const glow = (data._graph.bridge[n.id]||0) > 0 ? 0.6 : 0.2;
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.size*2.2);
+      grad.addColorStop(0, "rgba(96,165,250,1)");
+      grad.addColorStop(1, `rgba(124,58,237,${glow})`);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // label
+      ctx.fillStyle = "rgba(232,240,255,.9)";
+      ctx.font = "12px ui-sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(n.name.slice(0,24), n.x, n.y - n.size - 6);
+    }
+    requestAnimationFrame(step);
+  }
+  step();
+
+  // interactions
+  let drag=null, offsetX=0, offsetY=0;
+  const pick = (mx,my)=>{
+    for (let i=N.length-1;i>=0;i--){
+      const n=N[i];
+      const dx=mx-n.x, dy=my-n.y;
+      if (dx*dx+dy*dy <= (n.size+8)**2) return n;
+    }
+    return null;
+  };
+  const rect = () => canvas.getBoundingClientRect();
+
+  canvas.addEventListener("mousedown", (e)=>{
+    const r=rect(), mx=(e.clientX-r.left)*(canvas.width/r.width)/ (window.devicePixelRatio||1);
+    const my=(e.clientY-r.top)*(canvas.height/r.height)/ (window.devicePixelRatio||1);
+    const n=pick(mx, my);
+    if (n){ drag=n; offsetX=mx-n.x; offsetY=my-n.y; selectNode(n.id); }
+    else { selectNode(null); }
+  });
+  canvas.addEventListener("mousemove", (e)=>{
+    if (!drag) return;
+    const r=rect(), mx=(e.clientX-r.left)*(canvas.width/r.width)/ (window.devicePixelRatio||1);
+    const my=(e.clientY-r.top)*(canvas.height/r.height)/ (window.devicePixelRatio||1);
+    drag.x = mx - offsetX; drag.y = my - offsetY; drag.vx=0; drag.vy=0;
+  });
+  window.addEventListener("mouseup", ()=>drag=null);
+}
+
+/* ------------------------------ RENDER: UI ------------------------------ */
+function refreshList() {
+  const el = $("list");
+  el.innerHTML = "";
+  for (const it of data.items) {
+    const row = document.createElement("div"); row.className="itemRow";
+    const left = document.createElement("div");
+    left.innerHTML = `<b>${escapeHtml(it.name)}</b><br><small>${escapeHtml((it.tags||[]).slice(0,6).join(", "))}</small>`;
+    const right = document.createElement("div");
+    const e1 = button("Edit", ()=>{ $("name").value = it.name; $("tags").value = it.tags.join(", "); $("story").value = it.story; $("name").focus(); });
+    const e2 = button("Del", ()=>{ data.items = data.items.filter(x=>x.id!==it.id); save(); rebuild(); });
+    right.append(e1, e2);
+    row.append(left, right);
+    el.append(row);
+  }
+}
+
+function renderSignals() {
+  // top tags
+  const tagCount = {};
+  for (const it of data.items) for (const t of it.tags||[]) tagCount[t]=(tagCount[t]||0)+1;
+  const top = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  const cloud = $("topTags"); cloud.innerHTML = "";
+  for (const [t,c] of top){
+    const b=document.createElement("span");
+    b.className="badge"; b.textContent = `${t} ×${c}`;
+    cloud.append(b);
+  }
+  // highlights
+  const hi = $("highlights"); hi.innerHTML="";
+  const bridges = Object.entries(data._graph.bridge).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  for (const [id,score] of bridges){
+    if (!score) continue;
+    const n = data._graph.nodes.find(x=>x.id===id);
+    const div = document.createElement("div"); div.className="itemRow";
+    div.innerHTML = `<div><b>${escapeHtml(n.name)}</b><br><small class="muted">bridge score: ${score}</small></div>`;
+    div.addEventListener("click", ()=>selectNode(id));
+    hi.append(div);
+  }
+}
+
+function selectNode(id) {
+  selected = id;
+  const box = $("details");
+  box.innerHTML = "";
+  if (!id){ box.innerHTML = `<div class="ghost">Select a node to see notes, tags, and prompts.</div>`; return; }
+  const n = data._graph.nodes.find(x=>x.id===id);
+  const links = data._graph.links.filter(e=>e.source===id||e.target===id)
+    .map(e=> e.source===id ? e.target : e.source )
+    .map(x=>data._graph.nodes.find(n=>n.id===x));
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `
+    <div><b style="font-size:16px">${escapeHtml(n.name)}</b></div>
+    <div class="muted">${escapeHtml((n.tags||[]).join(", "))}</div>
+    <div style="margin-top:8px; white-space:pre-wrap">${escapeHtml(n.story||"")}</div>
+    <hr style="border-color:#1f2937; margin:10px 0" />
+    <div><b>Neighbors</b></div>
+  `;
+  const copyBtn = button("Copy Links", ()=>copyLinksWithContext(n.story));
+  copyBtn.style.marginTop = "6px";
+  wrap.insertBefore(copyBtn, wrap.children[3]);
+  const list = document.createElement("div"); list.className="list";
+  for (const m of links.slice(0,8)) {
+    const row = document.createElement("div"); row.className="itemRow";
+    row.innerHTML = `<div><b>${escapeHtml(m.name)}</b><br><small class="muted">${escapeHtml(m.tags.slice(0,5).join(", "))}</small></div>`;
+    row.addEventListener("click", ()=>selectNode(m.id));
+    list.append(row);
+  }
+  const prompts = document.createElement("div");
+  prompts.style.marginTop = "8px";
+  prompts.innerHTML = `
+    <div><b>Quests</b></div>
+    <div class="list">
+      <div class="itemRow"><div>Write 4 lines linking <b>${escapeHtml(n.name)}</b> to the farthest node you can find.</div></div>
+      <div class="itemRow"><div>Describe one <b>texture</b> and one <b>sound</b> from this entry. Remove all abstractions.</div></div>
+      <div class="itemRow"><div>Title hunt: 3 titles for this node that <i>aren't</i> on the nose.</div></div>
+    </div>
+  `;
+  box.append(wrap, list, prompts);
+}
+
+/* ------------------------------ WIRING ------------------------------ */
+function button(label, fn){
+  const b=document.createElement("button"); b.className="btn"; b.textContent=label; b.addEventListener("click", fn); return b;
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
+
+$("add").addEventListener("click", ()=>{
+  addOrUpdate({
+    name: $("name").value,
+    tags: $("tags").value.split(","),
+    story: $("story").value
+  });
+  $("name").value=""; $("tags").value=""; $("story").value="";
+  rebuild(true);
+});
+document.addEventListener("keydown", (e)=>{
+  if ((e.metaKey||e.ctrlKey) && e.key === "Enter") $("add").click();
+});
+
+$("seed").addEventListener("click", ()=>{
+  data = seed(); save(); rebuild(true);
+});
+$("clear").addEventListener("click", ()=>{
+  if (!confirm("Delete all entries? This clears localStorage.")) return;
+  data = { items: [] }; save(); rebuild(true);
+});
+$("export").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+  a.download = "treasure-data.json"; a.click(); URL.revokeObjectURL(a.href);
+});
+$("import").addEventListener("change", async (e)=>{
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  try { data = JSON.parse(text); save(); rebuild(true); }
+  catch { alert("Invalid JSON."); }
+});
+
+$("rebuild").addEventListener("click", ()=>rebuild());
+$("threshold").addEventListener("input", ()=>rebuild());
+$("autosurface").addEventListener("change", ()=>rebuild());
+
+function rebuild(focusHidden=false){
+  buildGraph();
+  refreshList();
+  renderSignals();
+  if (!graph) { startSim(); } // first boot
+  if (focusHidden && $("autosurface").checked) {
+    // Select the highest-bridge node
+    const id = Object.entries(data._graph.bridge).sort((a,b)=>b[1]-a[1])[0]?.[0];
+    if (id) selectNode(id);
+  } else {
+    selectNode(selected);
+  }
+}
+
+/* ------------------------------ SEED ------------------------------ */
+function seed(){
+  const demo = {
+    items: [
+      { id: uid(), name: "{Jupiter} sticker", tags: ["sky","storm","ammonia","whorl"], story: "On the exit sign, a bruised orange whirl. Fluorescent hum makes it feel further than it is." },
+      { id: uid(), name: "Closet laptop", tags: ["midnight","typing","hum"], story: "Back against drywall. Cursor like a lighthouse. The mix is bad; I keep it." },
+      { id: uid(), name: "East-WesterN stairwell", tags: ["fluorescent","echo","concrete","draft"], story: "Colder than expected. Voices slide, never land." },
+      { id: uid(), name: "Kraken–Seahorse doodle", tags: ["margin","ink","myth","tug"], story: "Two creatures arguing politely in a coffee stain." },
+      { id: uid(), name: "Impatience token", tags: ["hurry","pulse","fast"], story: "Speed is a costume I sleep in." }
+    ]
+  };
+  return demo;
+}
+
+/* ------------------------------ BOOT ------------------------------ */
+buildGraph();
+startSim();
+refreshList();
+renderSignals();
+</script>
+</body>
+</html>
